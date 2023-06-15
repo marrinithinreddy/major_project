@@ -54,39 +54,29 @@ url='http://10.67.208.240:8080//shot.jpg'
 
 import cv2
 cap = cv2.VideoCapture(0)
-
 with detection_graph.as_default():
   with tf.compat.v1.Session(graph=detection_graph) as sess:
    ret = True
    while (ret):
       ret,image_np = cap.read()
-      
       if cv2.waitKey(20) & 0xFF == ord('b'): 
-       
           cv2.imwrite('opencv'+'.jpg', image_np) 
-      
-    
-    
           model_file = 'whole_%s_places365_python36.pth.tar' % arch
           if not os.access(model_file, os.W_OK):
               weight_url = 'http://places2.csail.mit.edu/models_places365/' + model_file
               os.system('wget ' + weight_url)
-        
           useGPU = 1
           if useGPU == 1:
               model = torch.load(model_file)
           else:
-              model = torch.load(model_file, map_location=lambda storage, loc: storage) # model trained in GPU could be deployed in CPU machine like this!
-        
+              model = torch.load(model_file, map_location=lambda storage, loc: storage)
           model.eval()
-       
           centre_crop = trn.Compose([
                 trn.Resize((256,256)),
                 trn.CenterCrop(224),
                 trn.ToTensor(),
                 trn.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
           ])
-      
           file_name = 'categories_places365.txt'
           if not os.access(file_name, os.W_OK):
               synset_url = 'https://raw.githubusercontent.com/csailvision/places365/master/categories_places365.txt'
@@ -96,9 +86,6 @@ with detection_graph.as_default():
               for line in class_file:
                   classes.append(line.strip().split(' ')[0][3:])
           classes = tuple(classes)
-    
-    
-        
           img_name = 'opencv.jpg'
           if not os.access(img_name, os.W_OK):
               img_url = 'http://places.csail.mit.edu/demo/' + img_name
@@ -106,8 +93,6 @@ with detection_graph.as_default():
     
           img = Image.open(img_name)
           input_img = V(centre_crop(img).unsqueeze(0), volatile=True)
-        
-
           logit = model.forward(input_img)
           h_x = F.softmax(logit, 1).data.squeeze()
           probs, idx = h_x.sort(0, True)
@@ -115,33 +100,19 @@ with detection_graph.as_default():
           print('POSSIBLE SCENES ARE: ' + img_name)
           engine.say("Possible Scene may be")
           engine.say(img_name)
-          
-        
           for i in range(0, 5):
               engine.say(classes[idx[i]])
               print('{}'.format(classes[idx[i]]))
                 
-       
-      # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
       image_np_expanded = np.expand_dims(image_np, axis=0)
       image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
-      # Each box represents a part of the image where a particular object was detected.
       boxes = detection_graph.get_tensor_by_name('detection_boxes:0')
-      # Each score represent how level of confidence for each of the objects.
-      # Score is shown on the result image, together with the class label.
       scores = detection_graph.get_tensor_by_name('detection_scores:0')
       classes = detection_graph.get_tensor_by_name('detection_classes:0')
       num_detections = detection_graph.get_tensor_by_name('num_detections:0')
-      # Actual detection.
       (boxes, scores, classes, num_detections) = sess.run(
           [boxes, scores, classes, num_detections],
           feed_dict={image_tensor: image_np_expanded})
-      
-      
-      
-      
-      
-      # Visualization of the results of a detection.
       if cv2.waitKey(2) & 0xFF == ord('a'):
           vis_util.vislize_boxes_and_labels_on_image_array(
           image_np,
@@ -165,10 +136,6 @@ with detection_graph.as_default():
           print(text)
           engine.say(text)
           engine.runAndWait()
-          
-      
-    
-            
       for i,b in enumerate(boxes[0]):
           
         if classes[0][i] == 3 or classes[0][i] == 6 or classes[0][i] == 8:
@@ -214,8 +181,7 @@ with detection_graph.as_default():
                 mid_x = (boxes[0][i][1]+boxes[0][i][3])/2
                 mid_y = (boxes[0][i][0]+boxes[0][i][2])/2
                 apx_distance = round(((1 - (boxes[0][i][3] - boxes[0][i][1]))**4),1)
-                
-                
+
                 if apx_distance <=0.1:
                     if mid_x > 0.3 and mid_x < 0.7:
                         print("cell phone")
@@ -301,8 +267,6 @@ with detection_graph.as_default():
                         engine.say("Book")
                         engine.runAndWait()
         
-                
-     
       cv2.imshow('image',cv2.resize(image_np,(1024,768)))
       if cv2.waitKey(2) & 0xFF == ord('t'):
           cv2.destroyAllWindows()
